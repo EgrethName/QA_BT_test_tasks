@@ -13,7 +13,7 @@ def generate_random_non_ascii_string(string_length):
     return random_non_ascii_string
 
 
-USERNAME_SPEC_SYMBOLS_TEMPLATE = '/&?#$+,:;=@\'/'
+USERNAME_SPEC_SYMBOLS_TEMPLATE = generate_random_string(6) + '/&?#$+,:;=@\'/'
 PASSWORD_TEMPLATE = generate_random_string(21)
 PASSWORD_NON_ASCII_TEMPLATE = "тестовый_пароль"
 PASSWORD_WITH_WHITESPACE = " " + generate_random_string(6) + " " + generate_random_string(6) + " "
@@ -165,17 +165,6 @@ class RegistrationData:
         "password2": ""
     }
 
-    REGISTRATION_PASSWORD1_IS_PASSWORDS2_SUBSET = {
-        "username": generate_random_string(12),
-        "password1": PASSWORD_TEMPLATE[:15],
-        "password2": PASSWORD_TEMPLATE[:17]
-    }
-
-    REGISTRATION_PASSWORD2_IS_PASSWORDS1_SUBSET = {
-        "username": generate_random_string(12),
-        "password1": PASSWORD_TEMPLATE[:17],
-        "password2": PASSWORD_TEMPLATE[:15]
-    }
 
     REGISTRATION_NON_ASCII_SYMBOLS_IN_USERNAME = {
         "username": generate_random_non_ascii_string(12),
@@ -290,20 +279,6 @@ class PasswordReplaceData:
       "old_password": PASSWORD_TEMPLATE[3:21],
       "password1": PASSWORD_TEMPLATE[:10],
       "password2": PASSWORD_TEMPLATE[11:]
-    }
-
-    REPLACE_PASSWORD1_IS_PASSWORDS2_SUBSET = {
-      "username": REG_USERNAME,
-      "old_password": PASSWORD_TEMPLATE[3:21],
-      "password1": PASSWORD_TEMPLATE[:15],
-      "password2": PASSWORD_TEMPLATE[:17]
-    }
-
-    REPLACE_PASSWORD2_IS_PASSWORDS1_SUBSET = {
-      "username": REG_USERNAME,
-      "old_password": PASSWORD_TEMPLATE[3:21],
-      "password1": PASSWORD_TEMPLATE[:17],
-      "password2": PASSWORD_TEMPLATE[:15]
     }
 
     REPLACE_PASSWORD1_PASSWORD2_MORE_THAN_20 = {
