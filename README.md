@@ -10,4 +10,4 @@ source venv/bin/activate
 pip3 install -r requirements.txt
 ```
 ##### Run tests
-`make run tests`
+`make test`
