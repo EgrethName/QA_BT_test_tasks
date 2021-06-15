@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>Test Report</title>
+    <style>body {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  /* do not increase min-width as some may use split screens */
+  min-width: 800px;
+  color: #999;
+}
+
+h1 {
+  font-size: 24px;
+  color: black;
+}
+
+h2 {
+  font-size: 16px;
+  color: black;
+}
+
+p {
+  color: black;
+}
+
+a {
+  color: #999;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/******************************
+ * SUMMARY INFORMATION
+ ******************************/
+#environment td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+}
+#environment tr:nth-child(odd) {
+  background-color: #f6f6f6;
+}
+
+/******************************
+ * TEST RESULT COLORS
+ ******************************/
+span.passed,
+.passed .col-result {
+  color: green;
+}
+
+span.skipped,
+span.xfailed,
+span.rerun,
+.skipped .col-result,
+.xfailed .col-result,
+.rerun .col-result {
+  color: orange;
+}
+
+span.error,
+span.failed,
+span.xpassed,
+.error .col-result,
+.failed .col-result,
+.xpassed .col-result {
+  color: red;
+}
+
+/******************************
+ * RESULTS TABLE
+ *
+ * 1. Table Layout
+ * 2. Extra
+ * 3. Sorting items
+ *
+ ******************************/
+/*------------------
+ * 1. Table Layout
+ *------------------*/
+#results-table {
+  border: 1px solid #e6e6e6;
+  color: #999;
+  font-size: 12px;
+  width: 100%;
+}
+#results-table th,
+#results-table td {
+  padding: 5px;
+  border: 1px solid #E6E6E6;
+  text-align: left;
+}
+#results-table th {
+  font-weight: bold;
+}
+
+/*------------------
+ * 2. Extra
+ *------------------*/
+.log {
+  background-color: #e6e6e6;
+  border: 1px solid #e6e6e6;
+  color: black;
+  display: block;
+  font-family: "Courier New", Courier, monospace;
+  height: 230px;
+  overflow-y: scroll;
+  padding: 5px;
+  white-space: pre-wrap;
+}
+.log:only-child {
+  height: inherit;
+}
+
+div.image {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.image img {
+  width: 320px;
+}
+
+div.video {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin-left: 5px;
+  overflow: hidden;
+  width: 320px;
+}
+div.video video {
+  overflow: hidden;
+  width: 320px;
+  height: 240px;
+}
+
+.collapsed {
+  display: none;
+}
+
+.expander::after {
+  content: " (show details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.collapser::after {
+  content: " (hide details)";
+  color: #BBB;
+  font-style: italic;
+  cursor: pointer;
+}
+
+/*------------------
+ * 3. Sorting items
+ *------------------*/
+.sortable {
+  cursor: pointer;
+}
+
+.sort-icon {
+  font-size: 0px;
+  float: left;
+  margin-right: 5px;
+  margin-top: 5px;
+  /*triangle*/
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+}
+.inactive .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #E6E6E6;
+}
+.asc.active .sort-icon {
+  /*finish triangle*/
+  border-bottom: 8px solid #999;
+}
+.desc.active .sort-icon {
+  /*finish triangle*/
+  border-top: 8px solid #999;
+}
+</style></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) { // eslint-disable-line no-redeclare
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function findAll(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sortColumn(elem) {
+    toggleSortStates(elem);
+    const colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    let key;
+    if (elem.classList.contains('result')) {
+        key = keyResult;
+    } else if (elem.classList.contains('links')) {
+        key = keyLink;
+    } else {
+        key = keyAlpha;
+    }
+    sortTable(elem, key(colIndex));
+}
+
+function showAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(showExtras);
+}
+
+function hideAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(hideExtras);
+}
+
+function showExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.remove('collapsed');
+    expandcollapse.classList.remove('expander');
+    expandcollapse.classList.add('collapser');
+}
+
+function hideExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.add('collapsed');
+    expandcollapse.classList.remove('collapser');
+    expandcollapse.classList.add('expander');
+}
+
+function showFilters() {
+    const filterItems = document.getElementsByClassName('filter');
+    for (let i = 0; i < filterItems.length; i++)
+        filterItems[i].hidden = false;
+}
+
+function addCollapse() {
+    // Add links for show/hide all
+    const resulttable = find('table#results-table');
+    const showhideall = document.createElement('p');
+    showhideall.innerHTML = '<a href="javascript:showAllExtras()">Show all details</a> / ' +
+                            '<a href="javascript:hideAllExtras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    findAll('.col-result').forEach(function(elem) {
+        const collapsed = getQueryParameter('collapsed') || 'Passed';
+        const extras = elem.parentNode.nextElementSibling;
+        const expandcollapse = document.createElement('span');
+        if (extras.classList.contains('collapsed')) {
+            expandcollapse.classList.add('expander');
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add('collapsed');
+            expandcollapse.classList.add('expander');
+        } else {
+            expandcollapse.classList.add('collapser');
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener('click', function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains('collapsed')) {
+                showExtras(event.currentTarget);
+            } else {
+                hideExtras(event.currentTarget);
+            }
+        });
+    });
+}
+
+function getQueryParameter(name) {
+    const match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () { // eslint-disable-line no-unused-vars
+    resetSortHeaders();
+
+    addCollapse();
+
+    showFilters();
+
+    sortColumn(find('.initial-sort'));
+
+    findAll('.sortable').forEach(function(elem) {
+        elem.addEventListener('click',
+            function() {
+                sortColumn(elem);
+            }, false);
+    });
+}
+
+function sortTable(clicked, keyFunc) {
+    const rows = findAll('.results-table-row');
+    const reversed = !clicked.classList.contains('asc');
+    const sortedRows = sort(rows, keyFunc, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    const thead = document.getElementById('results-table-head');
+    document.getElementById('results-table').remove();
+    const parent = document.createElement('table');
+    parent.id = 'results-table';
+    parent.appendChild(thead);
+    sortedRows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName('BODY')[0].appendChild(parent);
+}
+
+function sort(items, keyFunc, reversed) {
+    const sortArray = items.map(function(item, i) {
+        return [keyFunc(item), i];
+    });
+
+    sortArray.sort(function(a, b) {
+        const keyA = a[0];
+        const keyB = b[0];
+
+        if (keyA == keyB) return 0;
+
+        if (reversed) {
+            return keyA < keyB ? 1 : -1;
+        } else {
+            return keyA > keyB ? 1 : -1;
+        }
+    });
+
+    return sortArray.map(function(item) {
+        const index = item[1];
+        return items[index];
+    });
+}
+
+function keyAlpha(colIndex) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[colIndex].firstChild.data.toLowerCase();
+    };
+}
+
+function keyLink(colIndex) {
+    return function(elem) {
+        const dataCell = elem.childNodes[1].childNodes[colIndex].firstChild;
+        return dataCell == null ? '' : dataCell.innerText.toLowerCase();
+    };
+}
+
+function keyResult(colIndex) {
+    return function(elem) {
+        const strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+            'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[colIndex].firstChild.data);
+    };
+}
+
+function resetSortHeaders() {
+    findAll('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    findAll('.sortable').forEach(function(elem) {
+        const icon = document.createElement('div');
+        icon.className = 'sort-icon';
+        icon.textContent = 'vvv';
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove('desc', 'active');
+        elem.classList.add('asc', 'inactive');
+    });
+}
+
+function toggleSortStates(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        resetSortHeaders();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function isAllRowsHidden(value) {
+    return value.hidden == false;
+}
+
+function filterTable(elem) { // eslint-disable-line no-unused-vars
+    const outcomeAtt = 'data-test-result';
+    const outcome = elem.getAttribute(outcomeAtt);
+    const classOutcome = outcome + ' results-table-row';
+    const outcomeRows = document.getElementsByClassName(classOutcome);
+
+    for(let i = 0; i < outcomeRows.length; i++){
+        outcomeRows[i].hidden = !elem.checked;
+    }
+
+    const rows = findAll('.results-table-row').filter(isAllRowsHidden);
+    const allRowsHidden = rows.length == 0 ? true : false;
+    const notFoundMessage = document.getElementById('not-found-message');
+    notFoundMessage.hidden = !allRowsHidden;
+}
+</script>
+    <h1>report.html</h1>
+    <p>Report generated on 15-Jun-2021 at 03:24:09 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v3.1.1</p>
+    <h2>Environment</h2>
+    <table id="environment">
+      <tr>
+        <td>Packages</td>
+        <td>{"pluggy": "0.13.1", "py": "1.10.0", "pytest": "6.2.4"}</td></tr>
+      <tr>
+        <td>Platform</td>
+        <td>Linux-5.8.0-53-generic-x86_64-with-glibc2.29</td></tr>
+      <tr>
+        <td>Plugins</td>
+        <td>{"html": "3.1.1", "metadata": "1.11.0"}</td></tr>
+      <tr>
+        <td>Python</td>
+        <td>3.8.5</td></tr></table>
+    <h2>Summary</h2>
+    <p>68 tests ran in 20.66 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="passed">56 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="failed">12 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable" col="duration">Duration</th>
+          <th class="sortable links" col="links">Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_successful_user_registration]</td>
+          <td class="col-duration">0.25</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_user_auth.TestCaseUserRegistration object at 0x7faf12909820&gt;, method = &#x27;POST&#x27;, payload = {&#x27;password1&#x27;: &#x27;nHkOuVPxQkyem1E&#x27;, &#x27;pasword2&#x27;: &#x27;nHkOuVPxQkyem1E&#x27;, &#x27;username&#x27;: &#x27;Ibbid9RqkRns&#x27;}<br/>expected_status_code = 201<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        assert response.json()<br/>&gt;       assert response.status_code == expected_status_code, response.json()<br/><span class="error">E       AssertionError: {&#x27;message&#x27;: &quot;Missing fields: [&#x27;password2&#x27;]&quot;}</span><br/><span class="error">E       assert 400 == 201</span><br/><span class="error">E        +  where 400 = &lt;Response [400]&gt;.status_code</span><br/><br/>tests/test_user_auth.py:61: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_successful_registration_username_length_50]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_user_auth.TestCaseUserRegistration object at 0x7faf129235e0&gt;, method = &#x27;POST&#x27;<br/>payload = {&#x27;password1&#x27;: &#x27;nHkOuVPxQkyem1E&#x27;, &#x27;password2&#x27;: &#x27;nHkOuVPxQkyem1E&#x27;, &#x27;username&#x27;: &#x27;0cyOBBw0SM9-McgXsFs19nr5_gL0wS7AkWSGiOKoqegsD4oXdh&#x27;}, expected_status_code = 201<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        assert response.json()<br/>&gt;       assert response.status_code == expected_status_code, response.json()<br/><span class="error">E       AssertionError: {&#x27;message&#x27;: &#x27;Username to long. Max length is 32 chars&#x27;}</span><br/><span class="error">E       assert 400 == 201</span><br/><span class="error">E        +  where 400 = &lt;Response [400]&gt;.status_code</span><br/><br/>tests/test_user_auth.py:61: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_successful_registration_username_length_1]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_user_auth.TestCaseUserRegistration object at 0x7faf127fb280&gt;, method = &#x27;POST&#x27;, payload = {&#x27;password1&#x27;: &#x27;nHkOuVPxQkyem1E&#x27;, &#x27;password2&#x27;: &#x27;nHkOuVPxQkyem1E&#x27;, &#x27;username&#x27;: &#x27;5&#x27;}, expected_status_code = 201<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        assert response.json()<br/>&gt;       assert response.status_code == expected_status_code, response.json()<br/><span class="error">E       AssertionError: {&#x27;message&#x27;: &#x27;Username to short. Min length is 6 chars&#x27;}</span><br/><span class="error">E       assert 400 == 201</span><br/><span class="error">E        +  where 400 = &lt;Response [400]&gt;.status_code</span><br/><br/>tests/test_user_auth.py:61: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_successful_registration_password1_password2_length_1]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_user_auth.TestCaseUserRegistration object at 0x7faf1279d520&gt;, method = &#x27;POST&#x27;, payload = {&#x27;password1&#x27;: &#x27;n&#x27;, &#x27;password2&#x27;: &#x27;n&#x27;, &#x27;username&#x27;: &#x27;Dx26A1S6f0Fs&#x27;}, expected_status_code = 201<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        assert response.json()<br/>&gt;       assert response.status_code == expected_status_code, response.json()<br/><span class="error">E       AssertionError: {&#x27;message&#x27;: &#x27;Password to short. Min length is 6 chars&#x27;}</span><br/><span class="error">E       assert 400 == 201</span><br/><span class="error">E        +  where 400 = &lt;Response [400]&gt;.status_code</span><br/><br/>tests/test_user_auth.py:61: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_username_with_whitespace]</td>
+          <td class="col-duration">0.28</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_user_auth.TestCaseUserRegistration object at 0x7faf1279da30&gt;, method = &#x27;POST&#x27;, payload = {&#x27;password1&#x27;: &#x27;nHkOuVPxQkyem1E&#x27;, &#x27;password2&#x27;: &#x27;nHkOuVPxQkyem1E&#x27;, &#x27;username&#x27;: &#x27; rj1Q2d zsRAYr &#x27;}<br/>expected_status_code = 400<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        assert response.json()<br/>&gt;       assert response.status_code == expected_status_code, response.json()<br/><span class="error">E       AssertionError: {&#x27;result&#x27;: &#x27;New user  rj1Q2d zsRAYr  successfully created&#x27;}</span><br/><span class="error">E       assert 201 == 400</span><br/><span class="error">E        +  where 201 = &lt;Response [201]&gt;.status_code</span><br/><br/>tests/test_user_auth.py:61: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_password_with_whitespace]</td>
+          <td class="col-duration">0.28</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_user_auth.TestCaseUserRegistration object at 0x7faf127a7670&gt;, method = &#x27;POST&#x27;, payload = {&#x27;password1&#x27;: &#x27; NJCXq4 2_aVsh &#x27;, &#x27;password2&#x27;: &#x27; NJCXq4 2_aVsh &#x27;, &#x27;username&#x27;: &#x27;H0pl3aEB9yw4&#x27;}<br/>expected_status_code = 400<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        assert response.json()<br/>&gt;       assert response.status_code == expected_status_code, response.json()<br/><span class="error">E       AssertionError: {&#x27;result&#x27;: &#x27;New user H0pl3aEB9yw4 successfully created&#x27;}</span><br/><span class="error">E       assert 201 == 400</span><br/><span class="error">E        +  where 201 = &lt;Response [201]&gt;.status_code</span><br/><br/>tests/test_user_auth.py:61: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_username_contains_spec_symbols]</td>
+          <td class="col-duration">0.29</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_user_auth.TestCaseUserRegistration object at 0x7faf128755e0&gt;, method = &#x27;POST&#x27;, payload = {&#x27;password1&#x27;: &#x27;nHkOuVPxQkyem1E&#x27;, &#x27;password2&#x27;: &#x27;nHkOuVPxQkyem1E&#x27;, &#x27;username&#x27;: &quot;reo4TK/&amp;?#$+,:;=@&#x27;/&quot;}<br/>expected_status_code = 400<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        assert response.json()<br/>&gt;       assert response.status_code == expected_status_code, response.json()<br/><span class="error">E       AssertionError: {&#x27;result&#x27;: &quot;New user reo4TK/&amp;?#$+,:;=@&#x27;/ successfully created&quot;}</span><br/><span class="error">E       assert 201 == 400</span><br/><span class="error">E        +  where 201 = &lt;Response [201]&gt;.status_code</span><br/><br/>tests/test_user_auth.py:61: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserPasswordReplace::test_request[test_failed_replace_old_and_new_passwords_are_equal]</td>
+          <td class="col-duration">0.53</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_user_auth.TestCaseUserPasswordReplace object at 0x7faf127b29d0&gt;, method = &#x27;PUT&#x27;<br/>payload = {&#x27;old_password&#x27;: &#x27;OuVPxQkyem1EdIUgEB&#x27;, &#x27;password1&#x27;: &#x27;OuVPxQkyem1EdIUgEB&#x27;, &#x27;password2&#x27;: &#x27;OuVPxQkyem1EdIUgEB&#x27;, &#x27;username&#x27;: &#x27;-20SswIPTQNR&#x27;}, expected_status_code = 400<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        try:<br/>&gt;           assert response.status_code == expected_status_code, response.json()<br/><span class="error">E           AssertionError: {&#x27;result&#x27;: &#x27;Password successfully updated!&#x27;}</span><br/><span class="error">E           assert 202 == 400</span><br/><span class="error">E            +  where 202 = &lt;Response [202]&gt;.status_code</span><br/><br/>tests/test_user_auth.py:120: AssertionError<br/><br/>During handling of the above exception, another exception occurred:<br/><br/>self = &lt;test_user_auth.TestCaseUserPasswordReplace object at 0x7faf127b29d0&gt;, method = &#x27;PUT&#x27;<br/>payload = {&#x27;old_password&#x27;: &#x27;OuVPxQkyem1EdIUgEB&#x27;, &#x27;password1&#x27;: &#x27;OuVPxQkyem1EdIUgEB&#x27;, &#x27;password2&#x27;: &#x27;OuVPxQkyem1EdIUgEB&#x27;, &#x27;username&#x27;: &#x27;-20SswIPTQNR&#x27;}, expected_status_code = 400<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        try:<br/>            assert response.status_code == expected_status_code, response.json()<br/>        except AssertionError:<br/>            # revert password to default if got an unexpected status code<br/>            result_msg = response.json().get(&#x27;result&#x27;)<br/>            if result_msg == &#x27;Password successfully updated!&#x27;:<br/>                new_payload = copy.deepcopy(payload)<br/>                new_payload[&#x27;password1&#x27;] = payload[&#x27;old_password&#x27;]<br/>                new_payload[&#x27;password2&#x27;] = payload[&#x27;old_password&#x27;]<br/>                new_payload[&#x27;old_password&#x27;] = payload[&#x27;password1&#x27;]<br/>                requests.request(method, USERS_LINK, json=new_payload)<br/>&gt;           raise AssertionError(&#x27;Password was updated due to test failure&#x27;)<br/><span class="error">E           AssertionError: Password was updated due to test failure</span><br/><br/>tests/test_user_auth.py:130: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserPasswordReplace::test_request[test_failed_replace_new_passwords_are_not_equal]</td>
+          <td class="col-duration">0.57</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_user_auth.TestCaseUserPasswordReplace object at 0x7faf130656d0&gt;, method = &#x27;PUT&#x27;<br/>payload = {&#x27;old_password&#x27;: &#x27;OuVPxQkyem1EdIUgEB&#x27;, &#x27;password1&#x27;: &#x27;nHkOuVPxQk&#x27;, &#x27;password2&#x27;: &#x27;em1EdIUgEB&#x27;, &#x27;username&#x27;: &#x27;-20SswIPTQNR&#x27;}, expected_status_code = 400<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        try:<br/>&gt;           assert response.status_code == expected_status_code, response.json()<br/><span class="error">E           AssertionError: {&#x27;result&#x27;: &#x27;Password successfully updated!&#x27;}</span><br/><span class="error">E           assert 202 == 400</span><br/><span class="error">E            +  where 202 = &lt;Response [202]&gt;.status_code</span><br/><br/>tests/test_user_auth.py:120: AssertionError<br/><br/>During handling of the above exception, another exception occurred:<br/><br/>self = &lt;test_user_auth.TestCaseUserPasswordReplace object at 0x7faf130656d0&gt;, method = &#x27;PUT&#x27;<br/>payload = {&#x27;old_password&#x27;: &#x27;OuVPxQkyem1EdIUgEB&#x27;, &#x27;password1&#x27;: &#x27;nHkOuVPxQk&#x27;, &#x27;password2&#x27;: &#x27;em1EdIUgEB&#x27;, &#x27;username&#x27;: &#x27;-20SswIPTQNR&#x27;}, expected_status_code = 400<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        try:<br/>            assert response.status_code == expected_status_code, response.json()<br/>        except AssertionError:<br/>            # revert password to default if got an unexpected status code<br/>            result_msg = response.json().get(&#x27;result&#x27;)<br/>            if result_msg == &#x27;Password successfully updated!&#x27;:<br/>                new_payload = copy.deepcopy(payload)<br/>                new_payload[&#x27;password1&#x27;] = payload[&#x27;old_password&#x27;]<br/>                new_payload[&#x27;password2&#x27;] = payload[&#x27;old_password&#x27;]<br/>                new_payload[&#x27;old_password&#x27;] = payload[&#x27;password1&#x27;]<br/>                requests.request(method, USERS_LINK, json=new_payload)<br/>&gt;           raise AssertionError(&#x27;Password was updated due to test failure&#x27;)<br/><span class="error">E           AssertionError: Password was updated due to test failure</span><br/><br/>tests/test_user_auth.py:130: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserPasswordReplace::test_request[test_failed_replace_password1_password2_more_than_20]</td>
+          <td class="col-duration">0.58</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_user_auth.TestCaseUserPasswordReplace object at 0x7faf12923fa0&gt;, method = &#x27;PUT&#x27;<br/>payload = {&#x27;old_password&#x27;: &#x27;OuVPxQkyem1EdIUgEB&#x27;, &#x27;password1&#x27;: &#x27;nHkOuVPxQkyem1EdIUgEB&#x27;, &#x27;password2&#x27;: &#x27;nHkOuVPxQkyem1EdIUgEB&#x27;, &#x27;username&#x27;: &#x27;-20SswIPTQNR&#x27;}, expected_status_code = 400<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        try:<br/>&gt;           assert response.status_code == expected_status_code, response.json()<br/><span class="error">E           AssertionError: {&#x27;result&#x27;: &#x27;Password successfully updated!&#x27;}</span><br/><span class="error">E           assert 202 == 400</span><br/><span class="error">E            +  where 202 = &lt;Response [202]&gt;.status_code</span><br/><br/>tests/test_user_auth.py:120: AssertionError<br/><br/>During handling of the above exception, another exception occurred:<br/><br/>self = &lt;test_user_auth.TestCaseUserPasswordReplace object at 0x7faf12923fa0&gt;, method = &#x27;PUT&#x27;<br/>payload = {&#x27;old_password&#x27;: &#x27;OuVPxQkyem1EdIUgEB&#x27;, &#x27;password1&#x27;: &#x27;nHkOuVPxQkyem1EdIUgEB&#x27;, &#x27;password2&#x27;: &#x27;nHkOuVPxQkyem1EdIUgEB&#x27;, &#x27;username&#x27;: &#x27;-20SswIPTQNR&#x27;}, expected_status_code = 400<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        try:<br/>            assert response.status_code == expected_status_code, response.json()<br/>        except AssertionError:<br/>            # revert password to default if got an unexpected status code<br/>            result_msg = response.json().get(&#x27;result&#x27;)<br/>            if result_msg == &#x27;Password successfully updated!&#x27;:<br/>                new_payload = copy.deepcopy(payload)<br/>                new_payload[&#x27;password1&#x27;] = payload[&#x27;old_password&#x27;]<br/>                new_payload[&#x27;password2&#x27;] = payload[&#x27;old_password&#x27;]<br/>                new_payload[&#x27;old_password&#x27;] = payload[&#x27;password1&#x27;]<br/>                requests.request(method, USERS_LINK, json=new_payload)<br/>&gt;           raise AssertionError(&#x27;Password was updated due to test failure&#x27;)<br/><span class="error">E           AssertionError: Password was updated due to test failure</span><br/><br/>tests/test_user_auth.py:130: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserPasswordReplace::test_request[test_failed_replace_password1_password2_less_than_6]</td>
+          <td class="col-duration">1.04</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_user_auth.TestCaseUserPasswordReplace object at 0x7faf12909e50&gt;, method = &#x27;PUT&#x27;<br/>payload = {&#x27;old_password&#x27;: &#x27;OuVPxQkyem1EdIUgEB&#x27;, &#x27;password1&#x27;: &#x27;nHkOu&#x27;, &#x27;password2&#x27;: &#x27;nHkOu&#x27;, &#x27;username&#x27;: &#x27;-20SswIPTQNR&#x27;}, expected_status_code = 400<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        try:<br/>&gt;           assert response.status_code == expected_status_code, response.json()<br/><span class="error">E           AssertionError: {&#x27;result&#x27;: &#x27;Password successfully updated!&#x27;}</span><br/><span class="error">E           assert 202 == 400</span><br/><span class="error">E            +  where 202 = &lt;Response [202]&gt;.status_code</span><br/><br/>tests/test_user_auth.py:120: AssertionError<br/><br/>During handling of the above exception, another exception occurred:<br/><br/>self = &lt;test_user_auth.TestCaseUserPasswordReplace object at 0x7faf12909e50&gt;, method = &#x27;PUT&#x27;<br/>payload = {&#x27;old_password&#x27;: &#x27;OuVPxQkyem1EdIUgEB&#x27;, &#x27;password1&#x27;: &#x27;nHkOu&#x27;, &#x27;password2&#x27;: &#x27;nHkOu&#x27;, &#x27;username&#x27;: &#x27;-20SswIPTQNR&#x27;}, expected_status_code = 400<br/><br/>    @pytest.mark.parametrize(&quot;method,payload,expected_status_code&quot;, test_cases)<br/>    def test_request(self, method, payload, expected_status_code):<br/>        response = requests.request(method, USERS_LINK, json=payload)<br/>        try:<br/>            assert response.status_code == expected_status_code, response.json()<br/>        except AssertionError:<br/>            # revert password to default if got an unexpected status code<br/>            result_msg = response.json().get(&#x27;result&#x27;)<br/>            if result_msg == &#x27;Password successfully updated!&#x27;:<br/>                new_payload = copy.deepcopy(payload)<br/>                new_payload[&#x27;password1&#x27;] = payload[&#x27;old_password&#x27;]<br/>                new_payload[&#x27;password2&#x27;] = payload[&#x27;old_password&#x27;]<br/>                new_payload[&#x27;old_password&#x27;] = payload[&#x27;password1&#x27;]<br/>                requests.request(method, USERS_LINK, json=new_payload)<br/>&gt;           raise AssertionError(&#x27;Password was updated due to test failure&#x27;)<br/><span class="error">E           AssertionError: Password was updated due to test failure</span><br/><br/>tests/test_user_auth.py:130: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="failed results-table-row">
+        <tr>
+          <td class="col-result">Failed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseMixedTests::test_failed_expired_jwt_token</td>
+          <td class="col-duration">0.87</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">self = &lt;test_user_auth.TestCaseMixedTests object at 0x7faf12790220&gt;<br/><br/>    def test_failed_expired_jwt_token(self):<br/>        first_login_response = requests.request(POST, LOGIN_LINK, json=MixedTestsData.MIXED_LOGIN_WITH_NEW_PASSWORD)<br/>        first_jwt_token = first_login_response.json().get(&quot;access_token&quot;)<br/>        first_jwt_header = {&quot;Authorization&quot;: &quot;Bearer&quot; + &quot; &quot; + first_jwt_token}<br/>        requests.request(PUT, USERS_LINK, json=MixedTestsData.MIXED_SECOND_REPLACE_PASSWORD_SUCCESSFUL)<br/>        todo_response = requests.request(POST, self.todo_link, headers=first_jwt_header,<br/>                                         json=MixedTestsData.MIXED_TODO_SUCCESSFUL_CREATE)<br/>&gt;       assert todo_response.status_code == 401, todo_response.json()<br/><span class="error">E       AssertionError: {&#x27;result&#x27;: &#x27;New todo successfully created!&#x27;}</span><br/><span class="error">E       assert 201 == 401</span><br/><span class="error">E        +  where 201 = &lt;Response [201]&gt;.status_code</span><br/><br/>tests/test_user_auth.py:209: AssertionError<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_successful_user_registration_with_correct_data]</td>
+          <td class="col-duration">0.34</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_username_already_exists]</td>
+          <td class="col-duration">0.27</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_with_empty_username_field]</td>
+          <td class="col-duration">0.27</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_with_empty_password1_password2_fields]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_with_empty_password1_field]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_with_empty_password2_field]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_not_equal_password1_and_password2]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_username_length_51]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_successful_registration_username_length_32]</td>
+          <td class="col-duration">0.28</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_username_length_33]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_successful_registration_username_length_6]</td>
+          <td class="col-duration">0.28</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_username_length_5]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_successful_registration_password1_password2_length_20]</td>
+          <td class="col-duration">0.29</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_password1_password2_length_21]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_successful_registration_password1_password2_length_6]</td>
+          <td class="col-duration">0.28</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_password1_password2_length_5]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_with_empty_fields]</td>
+          <td class="col-duration">0.24</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_non_ascii_symbols_in_username]</td>
+          <td class="col-duration">0.23</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_successful_registration_non_ascii_symbols_in_password]</td>
+          <td class="col-duration">0.28</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_failed_registration_different_passwords_cases]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserRegistration::test_request[test_successful_registration_with_excess_data]</td>
+          <td class="col-duration">0.28</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserLogin::test_successful_login</td>
+          <td class="col-duration">0.55</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserLogin::test_request[test_failed_login_wrong_username]</td>
+          <td class="col-duration">0.26</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserLogin::test_request[test_failed_login_with_wrong_password]</td>
+          <td class="col-duration">0.25</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserLogin::test_request[test_failed_login_without_username]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserLogin::test_request[test_failed_login_without_password]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserLogin::test_request[test_failed_login_with_empty_fields]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserPasswordReplace::test_request[test_successful_password_replace]</td>
+          <td class="col-duration">0.56</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserPasswordReplace::test_request[test_failed_try_to_replace_with_old_password]</td>
+          <td class="col-duration">0.26</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserPasswordReplace::test_request[test_failed_replace_incorrect_old_password]</td>
+          <td class="col-duration">0.26</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserPasswordReplace::test_request[test_failed_replace_with_empty_username_field]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserPasswordReplace::test_request[test_failed_replace_with_empty_old_password_field]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserPasswordReplace::test_request[test_failed_replace_with_empty_password1_field]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserPasswordReplace::test_request[test_failed_replace_with_empty_password2_field]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseUserPasswordReplace::test_request[test_failed_replace_with_empty_fields]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_home_methods[test_GET_method]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_home_methods[test_PUT_method]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_home_methods[test_POST_method]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_home_methods[test_PATCH_method]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_home_methods[test_DELETE_method]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_home_methods[test_HEAD_method]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_home_methods[test_OPTIONS_method]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_users_methods[test_GET_method]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_users_methods[test_PATCH_method]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_users_methods[test_DELETE_method]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_users_methods[test_HEAD_method]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_users_methods[test_OPTIONS_method]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_login_methods[test_GET_method]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_login_methods[test_PUT_method]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_login_methods[test_PATCH_method]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_login_methods[test_DELETE_method]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_login_methods[test_HEAD_method]</td>
+          <td class="col-duration">0.22</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseCheckHTTPMethods::test_http_login_methods[test_OPTIONS_method]</td>
+          <td class="col-duration">0.21</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseMixedTests::test_failed_login_with_old_password</td>
+          <td class="col-duration">0.88</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseMixedTests::test_successful_login_with_new_password</td>
+          <td class="col-duration">0.28</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_user_auth.py::TestCaseMixedTests::test_successful_create_todo_with_jwt_token</td>
+          <td class="col-duration">0.57</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody></table></body></html>
