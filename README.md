@@ -10,4 +10,7 @@ source venv/bin/activate
 pip3 install -r requirements.txt
 ```
 ##### Run tests
-`make test`
+`make run-tests`
+
+##### Run tests with html-report
+`make create-test-report`
