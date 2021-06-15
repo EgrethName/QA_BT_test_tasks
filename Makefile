@@ -1,2 +1,2 @@
-run tests:
-cd tests && pytest -v
+test:
+	pytest -v tests
