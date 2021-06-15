@@ -165,7 +165,6 @@ class RegistrationData:
         "password2": ""
     }
 
-
     REGISTRATION_NON_ASCII_SYMBOLS_IN_USERNAME = {
         "username": generate_random_non_ascii_string(12),
         "password1": PASSWORD_TEMPLATE[:15],

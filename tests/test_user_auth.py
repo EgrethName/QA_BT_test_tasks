@@ -19,7 +19,6 @@ USERS_LINK = "http://bzteltestapi.pythonanywhere.com/users"
 LOGIN_LINK = "http://bzteltestapi.pythonanywhere.com/login"
 
 
-# @pytest.mark.skip
 class TestCaseUserRegistration:
 
     method = "POST"
@@ -62,7 +61,6 @@ class TestCaseUserRegistration:
         assert response.status_code == expected_status_code, response.json()
 
 
-# @pytest.mark.skip
 class TestCaseUserLogin:
 
     test_cases = [
@@ -94,7 +92,6 @@ class TestCaseUserLogin:
         assert response.json()
 
 
-# @pytest.mark.skip
 class TestCaseUserPasswordReplace:
 
     test_cases = [
@@ -122,6 +119,7 @@ class TestCaseUserPasswordReplace:
         try:
             assert response.status_code == expected_status_code, response.json()
         except AssertionError:
+            # revert password to default if got an unexpected status code
             result_msg = response.json().get('result')
             if result_msg == 'Password successfully updated!':
                 new_payload = copy.deepcopy(payload)
@@ -129,13 +127,11 @@ class TestCaseUserPasswordReplace:
                 new_payload['password2'] = payload['old_password']
                 new_payload['old_password'] = payload['password1']
                 requests.request(method, USERS_LINK, json=new_payload)
-            raise AssertionError
+            raise AssertionError('Password was updated due to test failure')
 
         assert response.json()
 
 
-
-# @pytest.mark.skip
 class TestCaseCheckHTTPMethods:
 
     home_methods = [pytest.param(GET, 200, id="test_GET_method"),
@@ -175,7 +171,6 @@ class TestCaseCheckHTTPMethods:
         assert response.status_code == expected_status_code
 
 
-# @pytest.mark.skip
 class TestCaseMixedTests:
 
     todo_link = "http://bzteltestapi.pythonanywhere.com/todos/" + MixedTestsData.REG_USERNAME
